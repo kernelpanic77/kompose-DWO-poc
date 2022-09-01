@@ -1,55 +1,53 @@
 package main
 
 import (
+	"context"
+	"flag"
 	"fmt"
 	"log"
+	"path/filepath"
+	"reflect"
 
 	"github.com/kubernetes/kompose/pkg/kobject"
 	"github.com/kubernetes/kompose/pkg/loader"
 	"github.com/kubernetes/kompose/pkg/transformer/kubernetes"
+
+	//"k8s.io/apiserver/pkg/admission/plugin/webhook/namespace"
+	kube "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
+	"k8s.io/client-go/util/homedir"
+
+	appsv1 "k8s.io/api/apps/v1"
+	apiv1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-// func convertRuntimeObjectToKindMeta(in runtime.Object) v1.APIGroup {
-
-// }
 
 func main(){
 
-	// var kubeconfig *string
-	// if home := homedir.HomeDir(); home != "" {
-	// 	kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
-	// } else {
-	// 	kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
-	// }
-
-	// fmt.Println(*kubeconfig)
-	// flag.Parse()
-
-	// fmt.Print("hello")
-	// config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// clientset, err := kube.NewForConfig(config)
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	//fmt.Print(*clientset)
+	var kubeconfig *string
+	if home := homedir.HomeDir(); home != "" {
+		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
+	} else {
+		kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
+	}
+	flag.Parse()
+	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
+	if err != nil {
+		panic(err)
+	}
+	clientset, err := kube.NewForConfig(config)
+	if err != nil {
+		panic(err)
+	}
 
 	l, err := loader.GetLoader("compose")
 	if err != nil{
 		log.Fatal(err)
 	}
 
-	//fmt.Println(*clientset)
-
 	komposeObj := kobject.KomposeObject{
 		ServiceConfigs: make(map[string]kobject.ServiceConfig),
 	}
-
-
-	fmt.Printf("%+v\n", komposeObj)
 
 	opt := kobject.ConvertOptions{
 		CreateD: true,
@@ -60,23 +58,12 @@ func main(){
 		InputFiles: []string{"docker-compose.yml"},
 	}
 
-	fmt.Printf("%+v\n", opt)
-
-	// opt := kobject.ConvertOptions{ToStdout:false, CreateD:true, CreateRC:false, CreateDS:false, CreateDeploymentConfig:true, BuildRepo:, BuildBranch:, Build:none, PushImage:false,PushImageRegistry:, CreateChart:false, GenerateYaml:false, GenerateJSON:false, StoreManifest:false, EmptyVols:false, Volumes:persistentVolumeClaim, PVCRequestSize: InsecureRepository:false Replicas:1 InputFiles:[docker-compose.yaml] OutFile: Provider:kubernetes Namespace: Controller: IsDeploymentFlag:false IsDaemonSetFlag:false IsReplicationControllerFlag:false IsReplicaSetFlag:false IsDeploymentConfigFlag:false IsNamespaceFlag:false Server: YAMLIndent:2 WithKomposeAnnotation:true MultipleContainerMode:false ServiceGroupMode: ServiceGroupName:}
-
-	// inputFiles := []string{"docker-compose.yml"}
 	komposeObj, err = l.LoadFile(opt.InputFiles)
 
 	if(err != nil){
 		log.Fatal(err)
 	}
 
-	//fmt.Printf("komposeObj: %v\n", komposeObj)
-	// keys := make([]string, 0, len(komposeObj.ServiceConfigs))
-	// for k := range komposeObj.ServiceConfigs {
-	// 	keys = append(keys, k)
-	// }
-	
 	t := &kubernetes.Kubernetes{Opt: opt}
 	
 	objects, err := t.Transform(komposeObj, opt)
@@ -85,13 +72,42 @@ func main(){
 		log.Fatal(err)
 	}
 
-	fmt.Println("runtime objects", objects)
+	deploymentsClient := clientset.AppsV1().Deployments(apiv1.NamespaceDefault)
+		
+	dep :=  objects[2].(*appsv1.Deployment)
+	fmt.Printf("%v\n", dep)
 
-	
+	deploymentObjs := make([]*appsv1.Deployment, 0)
 	for i := 0; i < len(objects); i++ {
-		fmt.Println(objects[i].GetObjectKind().GroupVersionKind())
+		if(objects[i].GetObjectKind().GroupVersionKind().Kind == "Deployment"){
+			depl := objects[i].(*appsv1.Deployment)
+			deploymentObjs = append(deploymentObjs, depl)
+		}
 	}
 
-	// fmt.Printf("t1: %T\n", myobj)
+	for i := 0; i < len(deploymentObjs); i++ {
+		result, err := deploymentsClient.Create(context.TODO(), deploymentObjs[i], metav1.CreateOptions{})
+		if err != nil {
+			panic(err)
+		}
+		fmt.Printf("Create Deployment %q.\n", result.GetObjectMeta().GetName())
+	}
+
+	// creating service objects
+	keys := reflect.ValueOf(komposeObj.ServiceConfigs).MapKeys()
+	serviceObjs := make([]*apiv1.Service, 0)
+	for _, key := range keys {
+		svc := *t.CreateService(key.Interface().(string), komposeObj.ServiceConfigs[key.Interface().(string)])
+		serviceObjs = append(serviceObjs, &svc)
+	}
 	
+	servicesClient := clientset.CoreV1().Services(apiv1.NamespaceDefault)
+
+	for i := 0; i < len(serviceObjs); i++ {
+		result, err := servicesClient.Create(context.TODO(), serviceObjs[i], metav1.CreateOptions{})
+		if err != nil {
+			panic(err)
+		}
+		fmt.Printf("Create Service %q.\n", result.GetObjectMeta().GetName())
+	}
 }
