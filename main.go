@@ -74,8 +74,8 @@ func main(){
 
 	deploymentsClient := clientset.AppsV1().Deployments(apiv1.NamespaceDefault)
 		
-	dep :=  objects[2].(*appsv1.Deployment)
-	fmt.Printf("%v\n", dep)
+	// dep :=  objects[2].(*appsv1.Deployment)
+	// fmt.Printf("%v\n", dep)
 
 	deploymentObjs := make([]*appsv1.Deployment, 0)
 	for i := 0; i < len(objects); i++ {
