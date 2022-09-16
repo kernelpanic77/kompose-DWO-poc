@@ -1,9 +1,0 @@
-{ToStdout:false CreateD:false CreateRC:false CreateDS:false CreateDeploymentConfig:false BuildRepo: BuildBranch: Build: PushImage:false PushImageRegistry: CreateChart:false GenerateYaml:false GenerateJSON:false StoreManifest:false EmptyVols:false Volumes: PVCRequestSize: InsecureRepository:false Replicas:0 InputFiles:[docker-compose.yml] OutFile: Provider:kubernetes Namespace: Controller: IsDeploymentFlag:false IsDaemonSetFlag:false IsReplicationControllerFlag:false IsReplicaSetFlag:false IsDeploymentConfigFlag:false IsNamespaceFlag:false Server: YAMLIndent:0 WithKomposeAnnotation:false MultipleContainerMode:false ServiceGroupMode: ServiceGroupName:}
-
-{ToStdout:false CreateD:true CreateRC:false CreateDS:false CreateDeploymentConfig:true BuildRepo: BuildBranch: Build:none PushImage:false PushImageRegistry: CreateChart:false GenerateYaml:false GenerateJSON:false StoreManifest:false EmptyVols:false Volumes:persistentVolumeClaim PVCRequestSize: InsecureRepository:false Replicas:1 InputFiles:[docker-compose.yaml] OutFile: Provider:kubernetes Namespace: Controller: IsDeploymentFlag:false IsDaemonSetFlag:false IsReplicationControllerFlag:false IsReplicaSetFlag:false IsDeploymentConfigFlag:false IsNamespaceFlag:false Server: YAMLIndent:2 WithKomposeAnnotation:true MultipleContainerMode:false ServiceGroupMode: ServiceGroupName:}
-
-
-
-// createD = true 
-// createDeploymentConfig = true
-// build = none
