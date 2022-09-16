@@ -22,15 +22,23 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func main(){
+// TODO pick the defautnamespace from the kubeconfig file
 
+// add complex stuff like volumes 
+
+// test compose files - automate that process of running the main file
+
+
+func main(){
+	fmt.Printf("apiv1.NamespaceAll: %v\n", apiv1.NamespaceAll)
 	var kubeconfig *string
 	if home := homedir.HomeDir(); home != "" {
 		kubeconfig = flag.String("kubeconfig", filepath.Join(home, ".kube", "config"), "(optional) absolute path to the kubeconfig file")
 	} else {
 		kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
 	}
-	flag.Parse()
+	//flag.Parse()
+	*kubeconfig = "ap"
 	config, err := clientcmd.BuildConfigFromFlags("", *kubeconfig)
 	if err != nil {
 		panic(err)
